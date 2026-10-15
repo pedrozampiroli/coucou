@@ -101,6 +101,9 @@ enum ChatProvider: String, CaseIterable, Codable {
     case deepseek  = "deepseek"
     case qwen      = "qwen"
     case moonshot  = "moonshot"
+    /// A provider the user added (Settings → Chat → More providers); which one is
+    /// `AppState.activeCustomProviderID`. It has no pill and no fixed name or colour here.
+    case custom    = "custom"
 
     var displayName: String {
         switch self {
@@ -112,6 +115,7 @@ enum ChatProvider: String, CaseIterable, Codable {
         case .deepseek:  "DeepSeek"
         case .qwen:      "Qwen"
         case .moonshot:  "Moonshot"
+        case .custom:    "Custom"
         }
     }
 
@@ -125,6 +129,7 @@ enum ChatProvider: String, CaseIterable, Codable {
         case .deepseek:  "#5B8FF9"
         case .qwen:      "#FF6A00"
         case .moonshot:  "#7C5CFC"
+        case .custom:    "#9CA3AF"
         }
     }
 
@@ -138,6 +143,7 @@ enum ChatProvider: String, CaseIterable, Codable {
         case .deepseek:  "deepseek-chat"
         case .qwen:      "qwen-max"
         case .moonshot:  "moonshot-v1-32k"
+        case .custom:    ""
         }
     }
 
@@ -151,6 +157,7 @@ enum ChatProvider: String, CaseIterable, Codable {
         case .deepseek:  "deepseek-api-key"
         case .qwen:      "qwen-api-key"
         case .moonshot:  "moonshot-api-key"
+        case .custom:    ""   // each custom provider names its own Keychain item
         }
     }
 
@@ -168,6 +175,7 @@ enum ChatProvider: String, CaseIterable, Codable {
         case .deepseek:  "ai_deepseek"
         case .qwen:      "ai_qwen"
         case .moonshot:  "ai_moonshot"
+        case .custom:    "ai_custom"
         }
     }
 
