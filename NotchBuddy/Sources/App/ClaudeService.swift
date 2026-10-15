@@ -452,8 +452,9 @@ final class ClaudeService {
                     baseURL: baseURL,
                     encodedBody: encodedBody,
                     model: modelCopy,
-                    completionsURL: custom == nil ? nil : url,
-                    authorization: custom == nil ? "Bearer ollama" : authHeader
+                    // Cloud providers (DeepSeek, Qwen, Moonshot) and custom ones: their own URL and key.
+                    completionsURL: provider.isLocal ? nil : url,
+                    authorization: provider.isLocal ? "Bearer ollama" : authHeader
                 ) { [state, msgId] visible in
                     if !visible.isEmpty, state.stateOverride == .thinking {
                         state.stateOverride = nil   // hide typing dots on first visible text
