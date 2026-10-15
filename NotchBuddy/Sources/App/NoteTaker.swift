@@ -13,6 +13,8 @@ enum NoteSummaryEngine: Hashable, Identifiable {
     case claude
     /// Another chat provider of Settings → Chat, with its key or local server and its chat model.
     case provider(ChatProvider)
+    /// A provider added in Settings → Chat (a signed-in command-line tool, or a server), by id.
+    case custom(String)
     /// Apple Intelligence, on the Mac (macOS 26).
     case apple
     case off
@@ -22,6 +24,7 @@ enum NoteSummaryEngine: Hashable, Identifiable {
         switch self {
         case .claude:              return "claude"
         case .provider(let p):     return "provider:\(p.rawValue)"
+        case .custom(let id):      return "custom:\(id)"
         case .apple:               return "apple"
         case .off:                 return "off"
         }
@@ -33,6 +36,10 @@ enum NoteSummaryEngine: Hashable, Identifiable {
         case "apple":  self = .apple
         case "off":    self = .off
         default:
+            if rawValue.hasPrefix("custom:") {
+                self = .custom(String(rawValue.dropFirst("custom:".count)))
+                return
+            }
             guard rawValue.hasPrefix("provider:"),
                   let p = ChatProvider(rawValue: String(rawValue.dropFirst("provider:".count))),
                   p != .anthropic else { return nil }
@@ -49,6 +56,8 @@ enum NoteSummaryEngine: Hashable, Identifiable {
             return p.isLocal
                 ? String(format: String(localized: "notes.engine.local"), p.displayName)
                 : String(format: String(localized: "notes.engine.provider"), p.displayName)
+        case .custom(let id):
+            return MainActor.assumeIsolated { AppState.shared.customProviders.first { $0.id == id }?.name } ?? id
         case .apple:  return String(localized: "notes.engine.apple")
         case .off:    return String(localized: "notes.engine.off")
         }
@@ -59,7 +68,11 @@ enum NoteSummaryEngine: Hashable, Identifiable {
     @MainActor static func available(keeping current: NoteSummaryEngine) -> [NoteSummaryEngine] {
         var engines: [NoteSummaryEngine] = [.claude]
         engines += OneShotAI.configured().map { .provider($0) }
-        if case .provider = current, !engines.contains(current) { engines.append(current) }
+        engines += OneShotAI.customProviders().map { .custom($0.id) }
+        switch current {
+        case .provider, .custom: if !engines.contains(current) { engines.append(current) }
+        default: break
+        }
         return engines + [.apple, .off]
     }
 }
@@ -386,6 +399,14 @@ final class NoteTaker: ObservableObject {
             reply = await OneShotAI.ask(p, system: Self.summaryInstructions,
                                         user: "<transcript>\n\(transcript.prefix(400_000))\n</transcript>",
                                         timeout: 120)
+        case .custom(let id):
+            if let provider = AppState.shared.customProviders.first(where: { $0.id == id }) {
+                reply = await OneShotAI.ask(custom: provider, system: Self.summaryInstructions,
+                                            user: "<transcript>\n\(transcript.prefix(400_000))\n</transcript>",
+                                            timeout: 120)
+            } else {
+                reply = nil
+            }
         case .apple:
             reply = await Self.appleSummary(transcript)
         case .off:
